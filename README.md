@@ -1,29 +1,16 @@
-# CS5890 Example Project
+Team Member Names: Chandler Neeley, Teague Beauchamp
+A-Numbers: A02429680
+Email Addresses: a02429680@aggies.usu.edu
+Team Leader: Chandler Neeley
 
-Minimal C++ project to satisfy repository and build requirements.
+Project: ELF Binary Inspector 
 
-Prerequisites (tested on Ubuntu 22.04):
-- clang++
-- cmake
-- git
-
-To build locally:
-
-```bash
+To build:
+```
 ./build.sh
 ```
 
-To run the built binary:
-
-```bash
-./build/cs5890
+To run:
 ```
-
-Repository layout:
-
-- CMakeLists.txt
-- build.sh
-- README.md
-- src/main.cpp
-
-All team members should be able to clone, commit, and push to the repository.
+./build/main
+```
