@@ -7,6 +7,7 @@ struct programHeader
     uint64_t flags;
     uint64_t offset;
     uint64_t virtualAddress;
+    uint64_t physicalAddress;
     uint64_t fileSize;
     uint64_t memorySize;
 };
