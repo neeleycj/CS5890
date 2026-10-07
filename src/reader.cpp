@@ -33,6 +33,7 @@ bool Reader::isValidELFFile()
     fileStream.seekg(18);
     fileStream.read(&machineByte, 1);
 
+    // Check the magic number, class, data encoding, and machine type
     if (!(magic[0] == 0x7f && magic[1] == 'E' && magic[2] == 'L' && magic[3] == 'F'))
     {
         return false;
@@ -60,22 +61,24 @@ Elf64_Ehdr Reader::getElf64_Ehdr()
     fileStream.seekg(0);
     fileStream.read(reinterpret_cast<char*>(&e_ident), sizeof(e_ident));
 
-    ehdr.e_ident[0] = e_ident[0];
-    ehdr.e_ident[1] = e_ident[1];
-    ehdr.e_ident[2] = e_ident[2];
-    ehdr.e_ident[3] = e_ident[3];
-    ehdr.e_ident[4] = e_ident[4];
-    ehdr.e_ident[5] = e_ident[5];
-    ehdr.e_ident[6] = e_ident[6];
-    ehdr.e_ident[7] = e_ident[7];
-    ehdr.e_ident[8] = e_ident[8];
-    ehdr.e_ident[9] = e_ident[9];
-    ehdr.e_ident[10] = e_ident[10];
-    ehdr.e_ident[11] = e_ident[11];
-    ehdr.e_ident[12] = e_ident[12];
-    ehdr.e_ident[13] = e_ident[13];
-    ehdr.e_ident[14] = e_ident[14];
-    ehdr.e_ident[15] = e_ident[15];
+    for (size_t i = 0; i < sizeof(e_ident); i++)
+    {
+        e_ident[i] = e_ident[i];
+    }
+    
+    fileStream.read(reinterpret_cast<char*>(&ehdr.e_type), sizeof(ehdr.e_type));
+    fileStream.read(reinterpret_cast<char*>(&ehdr.e_machine), sizeof(ehdr.e_machine));
+    fileStream.read(reinterpret_cast<char*>(&ehdr.e_version), sizeof(ehdr.e_version));
+    fileStream.read(reinterpret_cast<char*>(&ehdr.e_entry), sizeof(ehdr.e_entry));
+    fileStream.read(reinterpret_cast<char*>(&ehdr.e_phoff), sizeof(ehdr.e_phoff));
+    fileStream.read(reinterpret_cast<char*>(&ehdr.e_shoff), sizeof(ehdr.e_shoff));
+    fileStream.read(reinterpret_cast<char*>(&ehdr.e_flags), sizeof(ehdr.e_flags));
+    fileStream.read(reinterpret_cast<char*>(&ehdr.e_ehsize), sizeof(ehdr.e_ehsize));
+    fileStream.read(reinterpret_cast<char*>(&ehdr.e_phentsize), sizeof(ehdr.e_phentsize));
+    fileStream.read(reinterpret_cast<char*>(&ehdr.e_phnum), sizeof(ehdr.e_phnum));
+    fileStream.read(reinterpret_cast<char*>(&ehdr.e_shentsize), sizeof(ehdr.e_shentsize));
+    fileStream.read(reinterpret_cast<char*>(&ehdr.e_shnum), sizeof(ehdr.e_shnum));
+    fileStream.read(reinterpret_cast<char*>(&ehdr.e_shstrndx), sizeof(ehdr.e_shstrndx));
 
     return ehdr;
 }
