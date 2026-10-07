@@ -3,29 +3,43 @@
 
 struct programHeader
 {
-    uint64_t segmentType;
-    uint64_t flags;
-    uint64_t offset;
-    uint64_t virtualAddress;
-    uint64_t physicalAddress;
-    uint64_t fileSize;
-    uint64_t memorySize;
+    uint32_t   p_type;
+    uint32_t   p_flags;
+    uint64_t   p_offset;
+    uint64_t   p_vaddr;
+    uint64_t   p_paddr;
+    uint64_t   p_filesz;
+    uint64_t   p_memsz;
+    uint64_t   p_align;
 };
+
 struct sectionHeader
 {
-    uint64_t name;
-    uint64_t type;
-    uint64_t flags;
-    uint64_t offset;
-    uint64_t size;
+    uint32_t   sh_name;
+    uint32_t   sh_type;
+    uint64_t   sh_flags;
+    uint64_t   sh_addr;
+    uint64_t   sh_offset;
+    uint64_t   sh_size;
+    uint32_t   sh_link;
+    uint32_t   sh_info;
+    uint64_t   sh_addralign;
+    uint64_t   sh_entsize;
 };
-struct identification
-{
-    uint64_t type;
-    uint64_t machine;
-    uint64_t entryPoint;
-    uint64_t programHeaderOffset;
-    uint64_t programHeaderCount;
-    uint64_t sectionHeaderOffset;
-    uint64_t sectionHeaderCount;
+
+struct Elf64_Ehdr {
+    unsigned char e_ident[16];
+    uint16_t      e_type;
+    uint16_t      e_machine;
+    uint32_t      e_version;
+    uint64_t      e_entry;
+    uint64_t      e_phoff;
+    uint64_t      e_shoff;
+    uint32_t      e_flags;
+    uint16_t      e_ehsize;
+    uint16_t      e_phentsize;
+    uint16_t      e_phnum;
+    uint16_t      e_shentsize;
+    uint16_t      e_shnum;
+    uint16_t      e_shstrndx;
 };

@@ -16,7 +16,7 @@ public:
     bool isValidELFFile();
     programHeader getProgramHeader();
     sectionHeader getSectionHeader();
-    identification getIdentification();
+    Elf64_Ehdr getElf64_Ehdr();
 
 };
 
