@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_executable(main
     src/main.cpp
     src/reader.cpp
+    src/report.cpp
 )
 
 target_include_directories(main PRIVATE

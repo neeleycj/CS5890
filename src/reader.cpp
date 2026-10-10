@@ -139,4 +139,102 @@ sectionHeader Reader::getSectionHeader()
     return sh;
 }
 
+programHeader Reader::getProgramHeaderAt(uint16_t index)
+{
+    Elf64_Ehdr ehdr = getElf64_Ehdr();
+    programHeader ph;
+
+    uint64_t entryOffset = ehdr.e_phoff + static_cast<uint64_t>(index) * ehdr.e_phentsize;
+
+    fileStream.clear();
+    fileStream.seekg(entryOffset);
+    if (!fileStream)
+    {
+        throw std::runtime_error("Failed to seek to program header " + std::to_string(index));
+    }
+
+    fileStream.read(reinterpret_cast<char*>(&ph), sizeof(ph));
+    if (!fileStream)
+    {
+        throw std::runtime_error("Failed to read program header " + std::to_string(index));
+    }
+
+    return ph;
+}
+
+sectionHeader Reader::getSectionHeaderAt(uint16_t index)
+{
+    Elf64_Ehdr ehdr = getElf64_Ehdr();
+    sectionHeader sh;
+
+    uint64_t entryOffset = ehdr.e_shoff + static_cast<uint64_t>(index) * ehdr.e_shentsize;
+
+    fileStream.clear();
+    fileStream.seekg(entryOffset);
+    if (!fileStream)
+    {
+        throw std::runtime_error("Failed to seek to section header " + std::to_string(index));
+    }
+
+    fileStream.read(reinterpret_cast<char*>(&sh), sizeof(sh));
+    if (!fileStream)
+    {
+        throw std::runtime_error("Failed to read section header " + std::to_string(index));
+    }
+
+    return sh;
+}
+
+std::string Reader::readCString(uint64_t offset)
+{
+    fileStream.clear();
+    fileStream.seekg(offset);
+    if (!fileStream)
+    {
+        throw std::runtime_error("Failed to seek to string at offset " + std::to_string(offset));
+    }
+
+    std::string result;
+    char c;
+    while (fileStream.get(c) && c != '\0')
+    {
+        result.push_back(c);
+    }
+    return result;
+}
+
+std::string Reader::resolveSectionName(uint32_t nameIndex, uint16_t shstrndx)
+{
+    sectionHeader strtab = getSectionHeaderAt(shstrndx);
+    return readCString(strtab.sh_offset + nameIndex);
+}
+
+std::vector<programHeader> Reader::getProgramHeaders()
+{
+    Elf64_Ehdr ehdr = getElf64_Ehdr();
+    std::vector<programHeader> headers;
+    headers.reserve(ehdr.e_phnum);
+
+    for (uint16_t i = 0; i < ehdr.e_phnum; ++i)
+    {
+        headers.push_back(getProgramHeaderAt(i));
+    }
+
+    return headers;
+}
+
+std::vector<sectionHeader> Reader::getSectionHeaders()
+{
+    Elf64_Ehdr ehdr = getElf64_Ehdr();
+    std::vector<sectionHeader> headers;
+    headers.reserve(ehdr.e_shnum);
+
+    for (uint16_t i = 0; i < ehdr.e_shnum; ++i)
+    {
+        headers.push_back(getSectionHeaderAt(i));
+    }
+
+    return headers;
+}
+
 
