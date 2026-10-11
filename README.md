@@ -36,8 +36,8 @@ The general flow for this tool is receiving the ELF file, reading the bytes, val
 
 ### Important design decisions
 
-One important decision that had to be made was what how we would validate the file. We decided that we would use critical information found in the ELF Header. This included validating the contents and length of the "e_ident" array (especially the prescence of the "magic number"), and checking to see if it was an allowed format. 
+One important decision that had to be made was what how we would validate the file. We decided that we would use critical information found in the ELF Header. This included validating the contents and length of the "e_ident" array (especially the presence of the "magic number"), and checking to see if it was an allowed format. 
 
-Another decision that had to be made was how to acutally parse the information so we could eventually print it. We decided to define some structs that could contain the parsed information, and then created a Reader class that would help us to parse and validate the file. 
+Another decision that had to be made was how to actually parse the information so we could eventually print it. We decided to define some structs that could contain the parsed information, and then created a Reader class that would help us to parse and validate the file. 
 
 We also needed to decide how to handle errors. For reading errors, we decided it would be easiest to try and read and entire header and then report on a failure, rather than trying to report after reading each line (too verbose). 
