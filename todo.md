@@ -4,7 +4,15 @@
 
 - Research ELF format
     - Headers (Program and Section Headers)
+        - Program Header Table: tells the system how to create a process image. Files used to build a process image (execute a program) must have a program header table; relocatable files do not need one.
+        - Section Header Table: A section header table contains information describing the file‘s sections. Every section has an entry in the table; each entry gives information such as the section name, the section size, and so on. Files used during linking must have a section header table; other object files may or may not have one.
     - Supported types
+        - ELF64
+            -
+        - little-endian
+            -
+        - x86-64 ELF
+            - 
     - Section names
     - Types
     - Flags
