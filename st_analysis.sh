@@ -3,6 +3,8 @@ set -euo pipefail
 
 # Static analysis: configure + build under clang's scan-build in a
 # separate build dir, writing HTML/plist reports to analysis-results/.
+# Compiler warnings are enabled by the target's CMake configuration and are
+# intentionally printed during the build rather than treated as analyzer bugs.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="$ROOT/build-analysis"
 OUT_DIR="$ROOT/analysis-results"
@@ -31,9 +33,13 @@ status=0
 scan-build "${SB_ARGS[@]}" cmake --build "$BUILD_DIR" -j"$(nproc)" || status=$?
 
 latest="$(ls -td "$OUT_DIR"/*/ 2>/dev/null | head -n1 || true)"
-if [[ $status -ne 0 && -n "$latest" ]]; then
-    echo "Bugs found. Report: ${latest}index.html  (or: scan-view $latest)"
+if [[ $status -ne 0 ]]; then
+    if [[ -n "$latest" ]]; then
+        echo "Static analyzer bugs found. Report: ${latest}index.html  (or: scan-view $latest)"
+    else
+        echo "Analysis build failed; no static analyzer report was generated." >&2
+    fi
 else
-    echo "No bugs reported."
+    echo "Static analyzer found no bugs. Review compiler warnings printed above."
 fi
 exit $status

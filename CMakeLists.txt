@@ -13,3 +13,15 @@ add_executable(main
 target_include_directories(main PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(main PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wconversion
+        -Wshadow
+    )
+elseif (MSVC)
+    target_compile_options(main PRIVATE /W4)
+endif()
