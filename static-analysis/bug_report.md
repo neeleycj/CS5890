@@ -23,8 +23,6 @@
 /home/genial_libra/Code/CS5890/src/reader.cpp:27:19: warning: declaration shadows a field of 'Reader' [-Wshadow]
    27 |     std::ifstream fileStream(filePath, std::ios::binary);
       |                   ^
-```
-```
 /home/genial_libra/Code/CS5890/include/reader.hpp:10:19: note: previous declaration is here
    10 |     std::ifstream fileStream;
       |                   ^
