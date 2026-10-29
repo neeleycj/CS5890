@@ -24,7 +24,6 @@ bool Reader::isValidELFFile()
     unsigned char e_ident[16];
     char machineByte;
 
-    std::ifstream fileStream(filePath, std::ios::binary);
     if (!fileStream.is_open())
     {
         throw std::runtime_error("Failed to open file: " + filePath);

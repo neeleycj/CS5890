@@ -59,16 +59,30 @@
 ## Warning 1
 
 ### Warning	
-- Warning type and source-code location
+- This is a declaraction shadowing another
+
+```
+(reader.cpp)
+warning: declaration shadows a field of 'Reader' [-Wshadow]
+   27 |     std::ifstream fileStream(filePath, std::ios::binary);
+      |                   ^
+(reader.hpp)
+note: previous declaration is here
+   10 |     std::ifstream fileStream;
+      |                   ^
+```
 ### Analysis	
 - Explanation of the reported problem and relevant execution path
+- This is a declaration of ```std::ifstream fileStream(filePath, std::ios::binary)```in our reader.cpp file shadowing a previous declaration of ```std::ifstream fileStream``` in our reader.hpp file.
 ### Confirmation	
 - Confirmed bug, false positive, or unresolved, with justification
+- This is in fact a confirmed bug. Essentially, the constructor opens the file, then ```isValidELFFile()``` opens it again. In most cases, this won't cause much of an issue, but it could be a problem if the file path were to change during execution, for example.
 ### Root cause	
 - Why the bug occurs (for confirmed bugs)
+- This is a design and implementation issue where there is confusion about what was needed in the constructor and misusing it in ```isValidELFFile()```.
 ### Fix	
 - Changes made and verification results (for confirmed bugs)
-
+- We simply removed the shadow declaration on line 27 in reader.cpp. After running the script again, the warning is gone.
 
 ## Warning 2
 
