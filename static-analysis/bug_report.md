@@ -53,3 +53,85 @@
       |                      ^~~~~~
 6 warnings generated.
 ```
+
+# Bug Report
+
+## Warning 1
+
+### Warning	
+- Warning type and source-code location
+### Analysis	
+- Explanation of the reported problem and relevant execution path
+### Confirmation	
+- Confirmed bug, false positive, or unresolved, with justification
+### Root cause	
+- Why the bug occurs (for confirmed bugs)
+### Fix	
+- Changes made and verification results (for confirmed bugs)
+
+
+## Warning 2
+
+### Warning	
+- Warning type and source-code location
+### Analysis	
+- Explanation of the reported problem and relevant execution path
+### Confirmation	
+- Confirmed bug, false positive, or unresolved, with justification
+### Root cause	
+- Why the bug occurs (for confirmed bugs)
+### Fix	
+- Changes made and verification results (for confirmed bugs)
+
+## Warning 3
+
+### Warning	
+- Warning type and source-code location
+### Analysis	
+- Explanation of the reported problem and relevant execution path
+### Confirmation	
+- Confirmed bug, false positive, or unresolved, with justification
+### Root cause	
+- Why the bug occurs (for confirmed bugs)
+### Fix	
+- Changes made and verification results (for confirmed bugs)
+
+## Warning 4
+
+### Warning	
+- Warning type and source-code location
+### Analysis	
+- Explanation of the reported problem and relevant execution path
+### Confirmation	
+- Confirmed bug, false positive, or unresolved, with justification
+### Root cause	
+- Why the bug occurs (for confirmed bugs)
+### Fix	
+- Changes made and verification results (for confirmed bugs)
+
+
+## Warning 5
+
+### Warning	
+- Warning type and source-code location
+### Analysis	
+- Explanation of the reported problem and relevant execution path
+### Confirmation	
+- Confirmed bug, false positive, or unresolved, with justification
+### Root cause	
+- Why the bug occurs (for confirmed bugs)
+### Fix	
+- Changes made and verification results (for confirmed bugs)
+
+## Warning 6
+
+### Warning	
+- Warning type and source-code location
+### Analysis	
+- Explanation of the reported problem and relevant execution path
+### Confirmation	
+- Confirmed bug, false positive, or unresolved, with justification
+### Root cause	
+- Why the bug occurs (for confirmed bugs)
+### Fix	
+- Changes made and verification results (for confirmed bugs)
