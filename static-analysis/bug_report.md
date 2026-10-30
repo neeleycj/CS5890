@@ -30,22 +30,41 @@
   125 |     fileStream.seekg(ehdr.e_shoff);
       |                      ~~~~~^~~~~~~
 ```
+
+# Teague's bugs to document and fix
+
 ```
 /home/genial_libra/Code/CS5890/src/reader.cpp:150:22: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
   150 |     fileStream.seekg(entryOffset);
       |                      ^~~~~~~~~~~
 ```
+
+Warning 	        Warning type and source-code location
+Analysis 	        Explanation of the reported problem and relevant execution path
+Confirmation 	    Confirmed bug, false positive, or unresolved, with justification
+Root cause 	        Why the bug occurs (for confirmed bugs)
+Fix 	            Changes made and verification results (for confirmed bugs)
+
+
 ```
 /home/genial_libra/Code/CS5890/src/reader.cpp:173:22: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
   173 |     fileStream.seekg(entryOffset);
       |                      ^~~~~~~~~~~
 ```
+
+Warning 	        Warning type and source-code location
+Analysis 	        Explanation of the reported problem and relevant execution path
+Confirmation 	    Confirmed bug, false positive, or unresolved, with justification
+Root cause 	        Why the bug occurs (for confirmed bugs)
+Fix 	            Changes made and verification results (for confirmed bugs)
+
 ```
 /home/genial_libra/Code/CS5890/src/reader.cpp:191:22: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
   191 |     fileStream.seekg(offset);
       |                      ^~~~~~
-6 warnings generated.
 ```
+
+
 
 # Bug Report
 
@@ -114,14 +133,32 @@ reader.cpp:102:27: warning: implicit conversion changes signedness: 'uint64_t' (
 
 ### Warning	
 - Warning type and source-code location
+  This is a `Wsign-conversion`: an implicit conversion that changes the 'signedness' of `entryOffset`. Found in the `reader.cpp` file.
+```
+/home/genial_libra/Code/CS5890/src/reader.cpp:150:22: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
+  150 |     fileStream.seekg(entryOffset);
+      |                      ^~~~~~~~~~~
+```
 ### Analysis	
 - Explanation of the reported problem and relevant execution path
+  `entryOffset` is a `uint64_t` (unsigned integer, from 0 to 2^{64} - 1). `seekg()` takes a `std::streamoff` (a signed long, from -2^{63} to 2^{63} - 1). The compiler converts one to the other silently, so any value of `entryOffset` that is greater than `INT64_MAX` will wrap around to become a negative number when being converted from int to long.
+  ```
+  main.cpp:13           Reader reader(filepath)
+  report.cpp:190        reader.getProgramHeaders()
+  reader.cpp:217        for (i = 0; i < ehdr.e_phnum; ++i)
+  reader.cpp:219        getProgramHeaderAt(i)
+  reader.cpp:143        ehdr = getElf64_Ehdr()
+  reader.cpp:146        entryOffset = e_phoff + i * e_phentsize
+  reader.cpp:149        fileStream.seekg(entryOffset)
+  reader.cpp:155        fileStream.read(&ph, sizeof(ph))
+  ```
 ### Confirmation	
 - Confirmed bug, false positive, or unresolved, with justification
 ### Root cause	
 - Why the bug occurs (for confirmed bugs)
 ### Fix	
 - Changes made and verification results (for confirmed bugs)
+  `reader.cpp:102-106`
 
 
 ## Warning 5
@@ -149,3 +186,4 @@ reader.cpp:102:27: warning: implicit conversion changes signedness: 'uint64_t' (
 - Why the bug occurs (for confirmed bugs)
 ### Fix	
 - Changes made and verification results (for confirmed bugs)
+
