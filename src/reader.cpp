@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <cstdint>
+#include <limits>
 
 Reader::Reader(const std::string& filePath) : filePath(filePath), fileStream(filePath, std::ios::binary)
 {
@@ -98,7 +99,11 @@ programHeader Reader::getProgramHeader()
     Elf64_Ehdr ehdr = getElf64_Ehdr();
 
     fileStream.clear();
-    fileStream.seekg(ehdr.e_phoff);
+    if (ehdr.e_phoff > std::numeric_limits<std::streamoff>::max())
+    {
+        throw std::runtime_error("Program header offset is too large");
+    }
+    fileStream.seekg(static_cast<std::streamoff>(ehdr.e_phoff));
 
     if (!fileStream)
     {

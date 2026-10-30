@@ -19,14 +19,7 @@
 
 
 ## found warnings
-```
-/home/genial_libra/Code/CS5890/src/reader.cpp:27:19: warning: declaration shadows a field of 'Reader' [-Wshadow]
-   27 |     std::ifstream fileStream(filePath, std::ios::binary);
-      |                   ^
-/home/genial_libra/Code/CS5890/include/reader.hpp:10:19: note: previous declaration is here
-   10 |     std::ifstream fileStream;
-      |                   ^
-```
+
 ```
 /home/genial_libra/Code/CS5890/src/reader.cpp:102:27: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
   102 |     fileStream.seekg(ehdr.e_phoff);
@@ -87,11 +80,18 @@ note: previous declaration is here
 ## Warning 2
 
 ### Warning	
-- Warning type and source-code location
+- This is a implicit conversion issue betweeen unsigned to a signed long
+```
+reader.cpp:102:27: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
+  102 |     fileStream.seekg(ehdr.e_phoff);
+      |                      ~~~~~^~~~~~~
+```
 ### Analysis	
 - Explanation of the reported problem and relevant execution path
+
+- The issue here is that the e_phoff is defined as a uint64_t to match the expected struct for an ELF file, but the stream expects a signed long. Generally this won't cause many issues, but if there is a malformed file then it could lead to a runtime error.
 ### Confirmation	
-- Confirmed bug, false positive, or unresolved, with justification
+- Confirmed bug. This could lead to a runtime error which would be a major issue for the program.
 ### Root cause	
 - Why the bug occurs (for confirmed bugs)
 ### Fix	
