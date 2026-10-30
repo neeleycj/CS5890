@@ -5,9 +5,10 @@ set -euo pipefail
 # separate build dir, writing HTML/plist reports to analysis-results/.
 # Compiler warnings are enabled by the target's CMake configuration and are
 # intentionally printed during the build rather than treated as analyzer bugs.
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BUILD_DIR="$ROOT/build-analysis"
-OUT_DIR="$ROOT/analysis-results"
+ANALYSIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$ANALYSIS_DIR/.." && pwd)"
+BUILD_DIR="$ANALYSIS_DIR/build-analysis"
+OUT_DIR="$ANALYSIS_DIR/analysis-results"
 
 command -v scan-build >/dev/null || { echo "scan-build not found (install clang-tools)"; exit 1; }
 
