@@ -183,14 +183,18 @@ if (ehdr.e_shoff > std::numeric_limits<std::streamoff>::max())
 ### Warning	
 - Warning type and source-code location
   This is a `Wsign-conversion`: an implicit conversion that changes the 'signedness' of `entryOffset`. Found in the `reader.cpp` file.
+
 ```
 /home/genial_libra/Code/CS5890/src/reader.cpp:150:22: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
   150 |     fileStream.seekg(entryOffset);
       |                      ^~~~~~~~~~~
 ```
+
 ### Analysis	
 - Explanation of the reported problem and relevant execution path
-  `entryOffset` is a `uint64_t` (unsigned integer, from 0 to 2^{64} - 1). `seekg()` takes a `std::streamoff` (a signed long, from -2^{63} to 2^{63} - 1). The compiler converts one to the other silently, so any value of `entryOffset` that is greater than `INT64_MAX` will wrap around to become a negative number when being converted from int to long.
+
+- `entryOffset` is a `uint64_t` (unsigned integer, from 0 to 2^{64} - 1). `seekg()` takes a `std::streamoff` (a signed long, from -2^{63} to 2^{63} - 1). The compiler converts one to the other silently, so any value of `entryOffset` that is greater than `INT64_MAX` will wrap around to become a negative number when being converted from int to long.
+
   ```
   main.cpp:13           Reader reader(filepath)
   report.cpp:190        reader.getProgramHeaders()
@@ -201,6 +205,7 @@ if (ehdr.e_shoff > std::numeric_limits<std::streamoff>::max())
   reader.cpp:149        fileStream.seekg(entryOffset)
   reader.cpp:155        fileStream.read(&ph, sizeof(ph))
   ```
+
 ### Confirmation	
 - Confirmed bug, false positive, or unresolved, with justification
 ### Root cause	
