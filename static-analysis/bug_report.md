@@ -86,6 +86,14 @@ note: previous declaration is here
 ### Analysis	
 - Explanation of the reported problem and relevant execution path
 - This is a declaration of ```std::ifstream fileStream(filePath, std::ios::binary)```in our reader.cpp file shadowing a previous declaration of ```std::ifstream fileStream``` in our reader.hpp file.
+
+- Relevant execution path:
+  - main
+  - Reader reader
+    - Intializes Reader::filestream
+  - printReport
+    - Reader::isValidELFFile
+      - uses Reader::filestream AND creates a new one
 ### Confirmation	
 - Confirmed bug, false positive, or unresolved, with justification
 - This is in fact a confirmed bug. Essentially, the constructor opens the file, then ```isValidELFFile()``` opens it again. In most cases, this won't cause much of an issue, but it could be a problem if the file path were to change during execution, for example.
@@ -109,26 +117,67 @@ reader.cpp:102:27: warning: implicit conversion changes signedness: 'uint64_t' (
 - Explanation of the reported problem and relevant execution path
 
 - The issue here is that the e_phoff is defined as a uint64_t to match the expected struct for an ELF file, but the stream expects a signed long. Generally this won't cause many issues, but if there is a malformed file then it could lead to a runtime error.
+
+- Relevant execution path:
+  - Reader::getProgramHeader
+    - Reader::getElf64_Ehdr
+      - reader the ELF header
+    - attempts to seek to e_phoff
 ### Confirmation	
 - Confirmed bug. This could lead to a runtime error which would be a major issue for the program.
 ### Root cause	
 - Why the bug occurs (for confirmed bugs)
+
+- Generally, a bug wouldn't likely occur with something like this. But, if there were to be a malformed or malicious header that was too large, then it could lead to seeking issues. This is because seekg expects a streamoff object that is signed, so you have a conversion that may not work or lead to unexpected behaviors. 
 ### Fix	
 - Changes made and verification results (for confirmed bugs)
+- The fix was simple. All we needed to do was have a check before casting to see if the header is too large and throw an error, then cast to a streamoff object for safe seeking
 
+``` 
+lines 102-106
+if (ehdr.e_phoff > std::numeric_limits<std::streamoff>::max())
+    {
+        throw std::runtime_error("Program header offset is too large");
+    }
+    fileStream.seekg(static_cast<std::streamoff>(ehdr.e_phoff));
+```
 ## Warning 3
 
 ### Warning	
 - Warning type and source-code location
+- This is another implicit conversion issue betweeen unsigned to a signed long
+```
+/home/genial_libra/Code/CS5890/src/reader.cpp:125:27: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
+  125 |     fileStream.seekg(ehdr.e_shoff);
+      |                      ~~~~~^~~~~~~
+```
+
 ### Analysis	
 - Explanation of the reported problem and relevant execution path
+- The issue here again is that the e_shoff is defined as a uint64_t to match the expected struct for an ELF file, but the stream expects a signed long. Generally this won't cause many issues, but if there is a malformed file then it could lead to a runtime error.
+- Relevant execution path:
+  - Reader::getProgramHeader
+    - Reader::getElf64_Ehdr
+      - reader the ELF header
+    - attempts to seek to e_phoff
 ### Confirmation	
 - Confirmed bug, false positive, or unresolved, with justification
+- - Confirmed bug. This could lead to a runtime error which would be a major issue for the program.
 ### Root cause	
 - Why the bug occurs (for confirmed bugs)
+- Generally, a bug wouldn't likely occur with something like this. But, if there were to be a malformed or malicious header that was too large, then it could lead to seeking issues. This is because seekg expects a streamoff object that is signed, so you have a conversion that may not work or lead to unexpected behaviors. 
 ### Fix	
 - Changes made and verification results (for confirmed bugs)
+- The fix was simple. All we needed to do was have a check before casting to see if the header is too large and throw an error, then cast to a streamoff object for safe seeking
 
+``` 
+lines 129-133
+if (ehdr.e_shoff > std::numeric_limits<std::streamoff>::max())
+    {
+        throw std::runtime_error("Section header offset is too large");
+    }
+    fileStream.seekg(static_cast<std::streamoff>(ehdr.e_shoff));
+```
 ## Warning 4
 
 ### Warning	

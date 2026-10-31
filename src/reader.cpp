@@ -126,7 +126,11 @@ sectionHeader Reader::getSectionHeader()
     Elf64_Ehdr ehdr = getElf64_Ehdr();
 
     fileStream.clear();
-    fileStream.seekg(ehdr.e_shoff);
+    if (ehdr.e_shoff > std::numeric_limits<std::streamoff>::max())
+    {
+        throw std::runtime_error("Section header offset is too large");
+    }
+    fileStream.seekg(static_cast<std::streamoff>(ehdr.e_shoff));
 
     if (!fileStream)
     {
