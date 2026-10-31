@@ -152,10 +152,16 @@ programHeader Reader::getProgramHeaderAt(uint16_t index)
     Elf64_Ehdr ehdr = getElf64_Ehdr();
     programHeader ph;
 
-    uint64_t entryOffset = ehdr.e_phoff + static_cast<uint64_t>(index) * ehdr.e_phentsize;
+    const uint64_t relOffset = static_cast<uint64_t>(index) * ehdr.e_phentsize;
+    const auto maxOffset = static_cast<uint64_t>(std::numeric_limits<std::streamoff>::max());
+    if (ehdr.e_phoff > maxOffset - relOffset)
+    {
+        throw std::runtime_error("Program header " + std::to_string(index) + " offset is out of range");
+    }
+    uint64_t entryOffset = ehdr.e_phoff + relOffset;
 
     fileStream.clear();
-    fileStream.seekg(entryOffset);
+    fileStream.seekg(static_cast<std::streamoff>(entryOffset));
     if (!fileStream)
     {
         throw std::runtime_error("Failed to seek to program header " + std::to_string(index));
@@ -175,10 +181,16 @@ sectionHeader Reader::getSectionHeaderAt(uint16_t index)
     Elf64_Ehdr ehdr = getElf64_Ehdr();
     sectionHeader sh;
 
-    uint64_t entryOffset = ehdr.e_shoff + static_cast<uint64_t>(index) * ehdr.e_shentsize;
+    const uint64_t relOffset = static_cast<uint64_t>(index) * ehdr.e_shentsize;
+    const auto maxOffset = static_cast<uint64_t>(std::numeric_limits<std::streamoff>::max());
+    if (ehdr.e_shoff > maxOffset - relOffset)
+    {
+        throw std::runtime_error("Section header " + std::to_string(index) + " offset is out of range");
+    }
+    uint64_t entryOffset = ehdr.e_shoff + relOffset;
 
     fileStream.clear();
-    fileStream.seekg(entryOffset);
+    fileStream.seekg(static_cast<std::streamoff>(entryOffset));
     if (!fileStream)
     {
         throw std::runtime_error("Failed to seek to section header " + std::to_string(index));
@@ -195,8 +207,12 @@ sectionHeader Reader::getSectionHeaderAt(uint16_t index)
 
 std::string Reader::readCString(uint64_t offset)
 {
+    if (offset > static_cast<uint64_t>(std::numeric_limits<std::streamoff>::max()))
+    {
+        throw std::runtime_error("String offset is too large: " + std::to_string(offset));
+    }
     fileStream.clear();
-    fileStream.seekg(offset);
+    fileStream.seekg(static_cast<std::streamoff>(offset));
     if (!fileStream)
     {
         throw std::runtime_error("Failed to seek to string at offset " + std::to_string(offset));
@@ -213,7 +229,17 @@ std::string Reader::readCString(uint64_t offset)
 
 std::string Reader::resolveSectionName(uint32_t nameIndex, uint16_t shstrndx)
 {
+    Elf64_Ehdr ehdr = getElf64_Ehdr();
+    if (shstrndx >= ehdr.e_shnum)
+    {
+        throw std::runtime_error("Section name string table index is out of range");
+    }
     sectionHeader strtab = getSectionHeaderAt(shstrndx);
+    if (nameIndex >= strtab.sh_size ||
+        strtab.sh_offset > std::numeric_limits<uint64_t>::max() - nameIndex)
+    {
+        throw std::runtime_error("Section name index is out of range");
+    }
     return readCString(strtab.sh_offset + nameIndex);
 }
 

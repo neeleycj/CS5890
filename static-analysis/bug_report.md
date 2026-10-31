@@ -25,25 +25,20 @@
   102 |     fileStream.seekg(ehdr.e_phoff);
       |                      ~~~~~^~~~~~~
 ```
+
+
 ```
 /home/genial_libra/Code/CS5890/src/reader.cpp:125:27: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
   125 |     fileStream.seekg(ehdr.e_shoff);
       |                      ~~~~~^~~~~~~
 ```
 
-# Teague's bugs to document and fix
 
 ```
 /home/genial_libra/Code/CS5890/src/reader.cpp:150:22: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
   150 |     fileStream.seekg(entryOffset);
       |                      ^~~~~~~~~~~
 ```
-
-Warning 	        Warning type and source-code location
-Analysis 	        Explanation of the reported problem and relevant execution path
-Confirmation 	    Confirmed bug, false positive, or unresolved, with justification
-Root cause 	        Why the bug occurs (for confirmed bugs)
-Fix 	            Changes made and verification results (for confirmed bugs)
 
 
 ```
@@ -52,11 +47,6 @@ Fix 	            Changes made and verification results (for confirmed bugs)
       |                      ^~~~~~~~~~~
 ```
 
-Warning 	        Warning type and source-code location
-Analysis 	        Explanation of the reported problem and relevant execution path
-Confirmation 	    Confirmed bug, false positive, or unresolved, with justification
-Root cause 	        Why the bug occurs (for confirmed bugs)
-Fix 	            Changes made and verification results (for confirmed bugs)
 
 ```
 /home/genial_libra/Code/CS5890/src/reader.cpp:191:22: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
@@ -71,7 +61,7 @@ Fix 	            Changes made and verification results (for confirmed bugs)
 ## Warning 1
 
 ### Warning	
-- This is a declaraction shadowing another
+- This is a declaration shadowing another
 
 ```
 (reader.cpp)
@@ -90,7 +80,7 @@ note: previous declaration is here
 - Relevant execution path:
   - main
   - Reader reader
-    - Intializes Reader::filestream
+    - Initializes Reader::filestream
   - printReport
     - Reader::isValidELFFile
       - uses Reader::filestream AND creates a new one
@@ -107,7 +97,7 @@ note: previous declaration is here
 ## Warning 2
 
 ### Warning	
-- This is a implicit conversion issue betweeen unsigned to a signed long
+- This is a implicit conversion issue between unsigned to a signed long
 ```
 reader.cpp:102:27: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
   102 |     fileStream.seekg(ehdr.e_phoff);
@@ -145,7 +135,7 @@ if (ehdr.e_phoff > std::numeric_limits<std::streamoff>::max())
 
 ### Warning	
 - Warning type and source-code location
-- This is another implicit conversion issue betweeen unsigned to a signed long
+- This is another implicit conversion issue between unsigned to a signed long
 ```
 /home/genial_libra/Code/CS5890/src/reader.cpp:125:27: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
   125 |     fileStream.seekg(ehdr.e_shoff);
@@ -182,7 +172,7 @@ if (ehdr.e_shoff > std::numeric_limits<std::streamoff>::max())
 
 ### Warning	
 - Warning type and source-code location
-  This is a `Wsign-conversion`: an implicit conversion that changes the 'signedness' of `entryOffset`. Found in the `reader.cpp` file.
+- This is a `Wsign-conversion`: an implicit conversion that changes the 'signedness' of `entryOffset`. Found in the `reader.cpp` file.
 
 ```
 /home/genial_libra/Code/CS5890/src/reader.cpp:150:22: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
@@ -192,9 +182,9 @@ if (ehdr.e_shoff > std::numeric_limits<std::streamoff>::max())
 
 ### Analysis	
 - Explanation of the reported problem and relevant execution path
+- `entryOffset` is a `uint64_t` (unsigned integer, from 0 to 2^{64} - 1). `seekg()` takes a `std::streamoff` (a signed long, from -2^{63} to 2^{63} - 1). The compiler converts one to the other silently, so any value of `entryOffset` that is greater than `INT64_MAX` will wrap around to become a negative number when being converted from `uint64_t` to a `long`.
 
-- `entryOffset` is a `uint64_t` (unsigned integer, from 0 to 2^{64} - 1). `seekg()` takes a `std::streamoff` (a signed long, from -2^{63} to 2^{63} - 1). The compiler converts one to the other silently, so any value of `entryOffset` that is greater than `INT64_MAX` will wrap around to become a negative number when being converted from int to long.
-
+- Relevant execution path:
   ```
   main.cpp:13           Reader reader(filepath)
   report.cpp:190        reader.getProgramHeaders()
@@ -208,36 +198,184 @@ if (ehdr.e_shoff > std::numeric_limits<std::streamoff>::max())
 
 ### Confirmation	
 - Confirmed bug, false positive, or unresolved, with justification
+- Confirmed. If the signed result is negative, seekg sets failbit and we throw a misleading "Failed to seek" error. If the addition wraps to a small valid offset, seekg succeeds and read() fills ph with unrelated bytes, which the report then prints as a program header.
+
 ### Root cause	
 - Why the bug occurs (for confirmed bugs)
+- The code treats file-supplied ELF fields as trusted. It does arithmetic on them without checking for overflow, then passes the unsigned result to an API that expects a signed type, without checking the range.
 ### Fix	
 - Changes made and verification results (for confirmed bugs)
-  `reader.cpp:102-106`
+- Before adding, check that `e_phoff + index * e_phentsize` fits in a `streamoff`. Since `index * e_phentsize` is at most 65535 * 65535 (< 2^32), checking `e_phoff > max - relOffset` also prevents the `uint64_t` addition from wrapping. Then cast explicitly for `seekg`.
+
+```cpp
+reader.cpp: getProgramHeaderAt()
+const uint64_t relOffset = static_cast<uint64_t>(index) * ehdr.e_phentsize;
+const auto maxOffset = static_cast<uint64_t>(std::numeric_limits<std::streamoff>::max());
+if (ehdr.e_phoff > maxOffset - relOffset)
+{
+    throw std::runtime_error("Program header " + std::to_string(index) + " offset is out of range");
+}
+uint64_t entryOffset = ehdr.e_phoff + relOffset;
+
+fileStream.clear();
+fileStream.seekg(static_cast<std::streamoff>(entryOffset));
+```
 
 
 ## Warning 5
 
 ### Warning	
 - Warning type and source-code location
+- This is another `Wsign-conversion` on `entryOffset`, this time in `getSectionHeaderAt()` in the `reader.cpp` file.
+
+```
+/home/genial_libra/Code/CS5890/src/reader.cpp:173:22: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
+  173 |     fileStream.seekg(entryOffset);
+      |                      ^~~~~~~~~~~
+```
+
 ### Analysis	
 - Explanation of the reported problem and relevant execution path
+- This is the same conversion as Warning 4. `entryOffset = e_shoff + index * e_shentsize` is a `uint64_t` built from ELF header fields and passed straight to `seekg()`, which takes a signed `streamoff`. Any value greater than `INT64_MAX` wraps around to a negative number.
+- This function is reached by two paths. In the second one, the index is `e_shstrndx`, which is read straight from the file and never checked against `e_shnum`.
+
+- Relevant execution path:
+  ```
+  main.cpp:13           Reader reader(filepath)
+  report.cpp:191        reader.getSectionHeaders()
+  reader.cpp:240        for (i = 0; i < ehdr.e_shnum; ++i)
+  reader.cpp:242        getSectionHeaderAt(i)
+  reader.cpp:175        ehdr = getElf64_Ehdr()
+  reader.cpp:178        entryOffset = e_shoff + i * e_shentsize
+  reader.cpp:181        fileStream.seekg(entryOffset)
+  reader.cpp:187        fileStream.read(&sh, sizeof(sh))
+
+  report.cpp:197        printSectionHeaders(reader, sectionHeaders, ehdr.e_shstrndx)
+  report.cpp:165        reader.resolveSectionName(sh.sh_name, shstrndx)
+  reader.cpp:216        getSectionHeaderAt(shstrndx)
+  reader.cpp:181        fileStream.seekg(entryOffset)
+  ```
+
 ### Confirmation	
 - Confirmed bug, false positive, or unresolved, with justification
+- Confirmed. As in Warning 4, a negative result makes `seekg` set failbit, and we throw a misleading "Failed to seek" error. If the addition wraps to a small valid offset, `seekg` succeeds and `read()` fills `sh` with unrelated bytes.
+
 ### Root cause	
 - Why the bug occurs (for confirmed bugs)
+- This is the same root cause as Warning 4. File-supplied ELF fields are treated as trusted, added together without an overflow check, and passed to a signed API without a range check.
+
 ### Fix	
 - Changes made and verification results (for confirmed bugs)
+- Use the same range check and explicit cast as Warning 4 in `getSectionHeaderAt()`, and check `shstrndx` against `e_shnum` in `resolveSectionName()`.
+
+```cpp
+reader.cpp: getSectionHeaderAt()
+const uint64_t relOffset = static_cast<uint64_t>(index) * ehdr.e_shentsize;
+const auto maxOffset = static_cast<uint64_t>(std::numeric_limits<std::streamoff>::max());
+if (ehdr.e_shoff > maxOffset - relOffset)
+{
+    throw std::runtime_error("Section header " + std::to_string(index) + " offset is out of range");
+}
+uint64_t entryOffset = ehdr.e_shoff + relOffset;
+
+fileStream.clear();
+fileStream.seekg(static_cast<std::streamoff>(entryOffset));
+
+reader.cpp: resolveSectionName()
+Elf64_Ehdr ehdr = getElf64_Ehdr();
+if (shstrndx >= ehdr.e_shnum)
+{
+    throw std::runtime_error("Section name string table index is out of range");
+}
+sectionHeader strtab = getSectionHeaderAt(shstrndx);
+```
 
 ## Warning 6
 
 ### Warning	
 - Warning type and source-code location
+- This is a `Wsign-conversion` on `offset` in `readCString()` in the `reader.cpp` file.
+
+```
+/home/genial_libra/Code/CS5890/src/reader.cpp:191:22: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
+  191 |     fileStream.seekg(offset);
+      |                      ^~~~~~
+```
+
 ### Analysis	
 - Explanation of the reported problem and relevant execution path
+- `readCString()` takes a `uint64_t offset` and passes it straight to `seekg()`, which takes a signed `streamoff`, so any value greater than `INT64_MAX` becomes negative. The offset is computed by `resolveSectionName()` as `strtab.sh_offset + nameIndex`. `sh_offset` comes from the string-table section header, which could be the garbage header from Warning 5, and `nameIndex` is each section's `sh_name`. Neither value is checked, and the sum can overflow.
+
+- Relevant execution path:
+  ```
+  main.cpp:13           Reader reader(filepath)
+  report.cpp:197        printSectionHeaders(reader, sectionHeaders, ehdr.e_shstrndx)
+  report.cpp:165        reader.resolveSectionName(sh.sh_name, shstrndx)
+  reader.cpp:216        strtab = getSectionHeaderAt(shstrndx)
+  reader.cpp:217        readCString(strtab.sh_offset + nameIndex)
+  reader.cpp:199        fileStream.seekg(offset)
+  reader.cpp:207        while (fileStream.get(c) && c != '\0')
+  ```
+
 ### Confirmation	
 - Confirmed bug, false positive, or unresolved, with justification
+- Confirmed. A negative offset makes `seekg` fail, and we throw a misleading "Failed to seek to string" error. A wrapped or out-of-table offset seeks to the wrong place, and the loop then reads bytes until it hits a `'\0'` or EOF. The result is that arbitrary file contents get printed as section names. Because `nameIndex` is never compared to `strtab.sh_size`, this can happen even when the addition does not overflow.
+
 ### Root cause	
 - Why the bug occurs (for confirmed bugs)
+- Two file-controlled values are added without an overflow check, and the unsigned result is implicitly converted to a signed `streamoff`. `nameIndex` is also never bounds-checked against the size of the string table it indexes into.
+
 ### Fix	
 - Changes made and verification results (for confirmed bugs)
+- Do a range check and an explicit cast in `readCString()`. In `resolveSectionName()`, reject a `nameIndex` that is outside the string table and an addition that would overflow.
+
+```cpp
+reader.cpp: readCString()
+if (offset > static_cast<uint64_t>(std::numeric_limits<std::streamoff>::max()))
+{
+    throw std::runtime_error("String offset is too large: " + std::to_string(offset));
+}
+fileStream.clear();
+fileStream.seekg(static_cast<std::streamoff>(offset));
+
+reader.cpp: resolveSectionName()
+if (nameIndex >= strtab.sh_size ||
+    strtab.sh_offset > std::numeric_limits<uint64_t>::max() - nameIndex)
+{
+    throw std::runtime_error("Section name index is out of range");
+}
+return readCString(strtab.sh_offset + nameIndex);
+```
+
+## Verification
+
+All 6 of these bug are now fixed. When running the `st_analysis.sh` script we get the output:
+
+```
+scan-build: Using '/usr/bin/clang-22' for static analysis
+-- The CXX compiler identification is Clang 22.1.8
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/lib/clang/c++-analyzer - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (2.6s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/winton/fall26/cs6890/CS5890/static-analysis/build-analysis
+scan-build: Analysis run complete.
+scan-build: Analysis results (plist files) deposited in '/home/winton/fall26/cs6890/CS5890/static-analysis/analysis-results/2026-10-31-125417-479970-1'
+scan-build: Removing directory '/home/winton/fall26/cs6890/CS5890/static-analysis/analysis-results/2026-10-31-125417-479970-1' because it contains no reports.
+scan-build: No bugs found.
+scan-build: Using '/usr/bin/clang-22' for static analysis
+[ 25%] Building CXX object CMakeFiles/main.dir/src/main.cpp.o
+[ 75%] Building CXX object CMakeFiles/main.dir/src/reader.cpp.o
+[ 75%] Building CXX object CMakeFiles/main.dir/src/report.cpp.o
+[100%] Linking CXX executable main
+[100%] Built target main
+scan-build: Analysis run complete.
+scan-build: Analysis results (plist files) deposited in '/home/winton/fall26/cs6890/CS5890/static-analysis/analysis-results/2026-10-31-125420-480033-1'
+scan-build: Removing directory '/home/winton/fall26/cs6890/CS5890/static-analysis/analysis-results/2026-10-31-125420-480033-1' because it contains no reports.
+scan-build: No bugs found.
+Static analyzer found no bugs. Review compiler warnings printed above.
+```
 
