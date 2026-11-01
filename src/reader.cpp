@@ -4,11 +4,11 @@
 #include <cstdint>
 #include <limits>
 
-Reader::Reader(const std::string& filePath) : filePath(filePath), fileStream(filePath, std::ios::binary)
+Reader::Reader(const std::string& path) : filePath(path), fileStream(path, std::ios::binary)
 {
     if (!fileStream.is_open())
     {
-        throw std::runtime_error("Failed to open file: " + filePath);
+        throw std::runtime_error("Failed to open file: " + path);
     }
 }
 
@@ -270,5 +270,4 @@ std::vector<sectionHeader> Reader::getSectionHeaders()
 
     return headers;
 }
-
 

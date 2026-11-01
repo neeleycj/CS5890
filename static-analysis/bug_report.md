@@ -1,61 +1,3 @@
-## Analyze and Confirm Reported Warnings
-- Investigate each warning reported in your project code.
-
-- Examine the reported source location and execution path.
-
-- Determine whether the warning represents a real bug.
-
-- Classify each warning as a confirmed bug, false positive, or unresolved issue, with supporting justification.
-
-## Fix Confirmed Bugs
-### For each confirmed bug:
-
-- Analyze its root cause and potential security or correctness impact.
-
-- Modify the source code to fix the underlying problem.
-
-- Verify the fix through testing and/or rerunning static analysis
-
-
-
-## found warnings
-
-```
-/home/genial_libra/Code/CS5890/src/reader.cpp:102:27: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
-  102 |     fileStream.seekg(ehdr.e_phoff);
-      |                      ~~~~~^~~~~~~
-```
-
-
-```
-/home/genial_libra/Code/CS5890/src/reader.cpp:125:27: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
-  125 |     fileStream.seekg(ehdr.e_shoff);
-      |                      ~~~~~^~~~~~~
-```
-
-
-```
-/home/genial_libra/Code/CS5890/src/reader.cpp:150:22: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
-  150 |     fileStream.seekg(entryOffset);
-      |                      ^~~~~~~~~~~
-```
-
-
-```
-/home/genial_libra/Code/CS5890/src/reader.cpp:173:22: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
-  173 |     fileStream.seekg(entryOffset);
-      |                      ^~~~~~~~~~~
-```
-
-
-```
-/home/genial_libra/Code/CS5890/src/reader.cpp:191:22: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
-  191 |     fileStream.seekg(offset);
-      |                      ^~~~~~
-```
-
-
-
 # Bug Report
 
 ## Warning 1
@@ -73,8 +15,8 @@ note: previous declaration is here
    10 |     std::ifstream fileStream;
       |                   ^
 ```
+
 ### Analysis	
-- Explanation of the reported problem and relevant execution path
 - This is a declaration of ```std::ifstream fileStream(filePath, std::ios::binary)```in our reader.cpp file shadowing a previous declaration of ```std::ifstream fileStream``` in our reader.hpp file.
 
 - Relevant execution path:
@@ -84,15 +26,16 @@ note: previous declaration is here
   - printReport
     - Reader::isValidELFFile
       - uses Reader::filestream AND creates a new one
+
 ### Confirmation	
-- Confirmed bug, false positive, or unresolved, with justification
 - This is in fact a confirmed bug. Essentially, the constructor opens the file, then ```isValidELFFile()``` opens it again. In most cases, this won't cause much of an issue, but it could be a problem if the file path were to change during execution, for example.
+
 ### Root cause	
-- Why the bug occurs (for confirmed bugs)
 - This is a design and implementation issue where there is confusion about what was needed in the constructor and misusing it in ```isValidELFFile()```.
+
 ### Fix	
-- Changes made and verification results (for confirmed bugs)
 - We simply removed the shadow declaration on line 27 in reader.cpp. After running the script again, the warning is gone.
+
 
 ## Warning 2
 
@@ -103,9 +46,8 @@ reader.cpp:102:27: warning: implicit conversion changes signedness: 'uint64_t' (
   102 |     fileStream.seekg(ehdr.e_phoff);
       |                      ~~~~~^~~~~~~
 ```
-### Analysis	
-- Explanation of the reported problem and relevant execution path
 
+### Analysis	
 - The issue here is that the e_phoff is defined as a uint64_t to match the expected struct for an ELF file, but the stream expects a signed long. Generally this won't cause many issues, but if there is a malformed file then it could lead to a runtime error.
 
 - Relevant execution path:
@@ -113,15 +55,17 @@ reader.cpp:102:27: warning: implicit conversion changes signedness: 'uint64_t' (
     - Reader::getElf64_Ehdr
       - reader the ELF header
     - attempts to seek to e_phoff
+
 ### Confirmation	
 - Confirmed bug. This could lead to a runtime error which would be a major issue for the program.
-### Root cause	
-- Why the bug occurs (for confirmed bugs)
 
-- Generally, a bug wouldn't likely occur with something like this. But, if there were to be a malformed or malicious header that was too large, then it could lead to seeking issues. This is because seekg expects a streamoff object that is signed, so you have a conversion that may not work or lead to unexpected behaviors. 
+### Root cause	
+
+- Generally, a bug wouldn't likely occur with something like this. But, if there were to be a malformed or malicious header that was too large, then it could lead to seeking issues. This is because seekg expects a streamoff object that is signed, so you have a conversion that may not work or lead to unexpected behaviors.
+
 ### Fix	
-- Changes made and verification results (for confirmed bugs)
-- The fix was simple. All we needed to do was have a check before casting to see if the header is too large and throw an error, then cast to a streamoff object for safe seeking
+
+- The fix was simple. All we needed to do was have a check before casting to see if the header is too large and throw an error, then cast to a streamoff object for safe seeking. We then ran the script and got no more warnings.
 
 ``` 
 lines 102-106
@@ -131,10 +75,10 @@ if (ehdr.e_phoff > std::numeric_limits<std::streamoff>::max())
     }
     fileStream.seekg(static_cast<std::streamoff>(ehdr.e_phoff));
 ```
+
 ## Warning 3
 
 ### Warning	
-- Warning type and source-code location
 - This is another implicit conversion issue between unsigned to a signed long
 ```
 /home/genial_libra/Code/CS5890/src/reader.cpp:125:27: warning: implicit conversion changes signedness: 'uint64_t' (aka 'unsigned long') to 'streamoff' (aka 'long') [-Wsign-conversion]
@@ -143,22 +87,24 @@ if (ehdr.e_phoff > std::numeric_limits<std::streamoff>::max())
 ```
 
 ### Analysis	
-- Explanation of the reported problem and relevant execution path
+
 - The issue here again is that the e_shoff is defined as a uint64_t to match the expected struct for an ELF file, but the stream expects a signed long. Generally this won't cause many issues, but if there is a malformed file then it could lead to a runtime error.
 - Relevant execution path:
   - Reader::getProgramHeader
     - Reader::getElf64_Ehdr
       - reader the ELF header
     - attempts to seek to e_phoff
+
 ### Confirmation	
-- Confirmed bug, false positive, or unresolved, with justification
-- - Confirmed bug. This could lead to a runtime error which would be a major issue for the program.
+
+- Confirmed bug. This could lead to a runtime error which would be a major issue for the program.
+
 ### Root cause	
-- Why the bug occurs (for confirmed bugs)
 - Generally, a bug wouldn't likely occur with something like this. But, if there were to be a malformed or malicious header that was too large, then it could lead to seeking issues. This is because seekg expects a streamoff object that is signed, so you have a conversion that may not work or lead to unexpected behaviors. 
+
 ### Fix	
-- Changes made and verification results (for confirmed bugs)
-- The fix was simple. All we needed to do was have a check before casting to see if the header is too large and throw an error, then cast to a streamoff object for safe seeking
+
+- The fix was simple. All we needed to do was have a check before casting to see if the header is too large and throw an error, then cast to a streamoff object for safe seeking. We then ran the script again and got no warnings.
 
 ``` 
 lines 129-133
@@ -168,10 +114,11 @@ if (ehdr.e_shoff > std::numeric_limits<std::streamoff>::max())
     }
     fileStream.seekg(static_cast<std::streamoff>(ehdr.e_shoff));
 ```
+
 ## Warning 4
 
 ### Warning	
-- Warning type and source-code location
+
 - This is a `Wsign-conversion`: an implicit conversion that changes the 'signedness' of `entryOffset`. Found in the `reader.cpp` file.
 
 ```
@@ -181,7 +128,7 @@ if (ehdr.e_shoff > std::numeric_limits<std::streamoff>::max())
 ```
 
 ### Analysis	
-- Explanation of the reported problem and relevant execution path
+
 - `entryOffset` is a `uint64_t` (unsigned integer, from 0 to 2^{64} - 1). `seekg()` takes a `std::streamoff` (a signed long, from -2^{63} to 2^{63} - 1). The compiler converts one to the other silently, so any value of `entryOffset` that is greater than `INT64_MAX` will wrap around to become a negative number when being converted from `uint64_t` to a `long`.
 
 - Relevant execution path:
@@ -197,14 +144,14 @@ if (ehdr.e_shoff > std::numeric_limits<std::streamoff>::max())
   ```
 
 ### Confirmation	
-- Confirmed bug, false positive, or unresolved, with justification
+
 - Confirmed. If the signed result is negative, seekg sets failbit and we throw a misleading "Failed to seek" error. If the addition wraps to a small valid offset, seekg succeeds and read() fills ph with unrelated bytes, which the report then prints as a program header.
 
 ### Root cause	
-- Why the bug occurs (for confirmed bugs)
+
 - The code treats file-supplied ELF fields as trusted. It does arithmetic on them without checking for overflow, then passes the unsigned result to an API that expects a signed type, without checking the range.
 ### Fix	
-- Changes made and verification results (for confirmed bugs)
+
 - Before adding, check that `e_phoff + index * e_phentsize` fits in a `streamoff`. Since `index * e_phentsize` is at most 65535 * 65535 (< 2^32), checking `e_phoff > max - relOffset` also prevents the `uint64_t` addition from wrapping. Then cast explicitly for `seekg`.
 
 ```cpp
@@ -221,11 +168,10 @@ fileStream.clear();
 fileStream.seekg(static_cast<std::streamoff>(entryOffset));
 ```
 
-
 ## Warning 5
 
 ### Warning	
-- Warning type and source-code location
+
 - This is another `Wsign-conversion` on `entryOffset`, this time in `getSectionHeaderAt()` in the `reader.cpp` file.
 
 ```
@@ -235,7 +181,7 @@ fileStream.seekg(static_cast<std::streamoff>(entryOffset));
 ```
 
 ### Analysis	
-- Explanation of the reported problem and relevant execution path
+
 - This is the same conversion as Warning 4. `entryOffset = e_shoff + index * e_shentsize` is a `uint64_t` built from ELF header fields and passed straight to `seekg()`, which takes a signed `streamoff`. Any value greater than `INT64_MAX` wraps around to a negative number.
 - This function is reached by two paths. In the second one, the index is `e_shstrndx`, which is read straight from the file and never checked against `e_shnum`.
 
@@ -257,15 +203,15 @@ fileStream.seekg(static_cast<std::streamoff>(entryOffset));
   ```
 
 ### Confirmation	
-- Confirmed bug, false positive, or unresolved, with justification
+
 - Confirmed. As in Warning 4, a negative result makes `seekg` set failbit, and we throw a misleading "Failed to seek" error. If the addition wraps to a small valid offset, `seekg` succeeds and `read()` fills `sh` with unrelated bytes.
 
 ### Root cause	
-- Why the bug occurs (for confirmed bugs)
+
 - This is the same root cause as Warning 4. File-supplied ELF fields are treated as trusted, added together without an overflow check, and passed to a signed API without a range check.
 
 ### Fix	
-- Changes made and verification results (for confirmed bugs)
+
 - Use the same range check and explicit cast as Warning 4 in `getSectionHeaderAt()`, and check `shstrndx` against `e_shnum` in `resolveSectionName()`.
 
 ```cpp
@@ -293,7 +239,7 @@ sectionHeader strtab = getSectionHeaderAt(shstrndx);
 ## Warning 6
 
 ### Warning	
-- Warning type and source-code location
+
 - This is a `Wsign-conversion` on `offset` in `readCString()` in the `reader.cpp` file.
 
 ```
@@ -303,7 +249,7 @@ sectionHeader strtab = getSectionHeaderAt(shstrndx);
 ```
 
 ### Analysis	
-- Explanation of the reported problem and relevant execution path
+
 - `readCString()` takes a `uint64_t offset` and passes it straight to `seekg()`, which takes a signed `streamoff`, so any value greater than `INT64_MAX` becomes negative. The offset is computed by `resolveSectionName()` as `strtab.sh_offset + nameIndex`. `sh_offset` comes from the string-table section header, which could be the garbage header from Warning 5, and `nameIndex` is each section's `sh_name`. Neither value is checked, and the sum can overflow.
 
 - Relevant execution path:
@@ -318,15 +264,15 @@ sectionHeader strtab = getSectionHeaderAt(shstrndx);
   ```
 
 ### Confirmation	
-- Confirmed bug, false positive, or unresolved, with justification
+
 - Confirmed. A negative offset makes `seekg` fail, and we throw a misleading "Failed to seek to string" error. A wrapped or out-of-table offset seeks to the wrong place, and the loop then reads bytes until it hits a `'\0'` or EOF. The result is that arbitrary file contents get printed as section names. Because `nameIndex` is never compared to `strtab.sh_size`, this can happen even when the addition does not overflow.
 
 ### Root cause	
-- Why the bug occurs (for confirmed bugs)
+
 - Two file-controlled values are added without an overflow check, and the unsigned result is implicitly converted to a signed `streamoff`. `nameIndex` is also never bounds-checked against the size of the string table it indexes into.
 
 ### Fix	
-- Changes made and verification results (for confirmed bugs)
+
 - Do a range check and an explicit cast in `readCString()`. In `resolveSectionName()`, reject a `nameIndex` that is outside the string table and an addition that would overflow.
 
 ```cpp

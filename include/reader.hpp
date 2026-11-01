@@ -9,7 +9,7 @@ private:
     std::string filePath;
     std::ifstream fileStream;
 public:
-    Reader(const std::string& filePath);
+    Reader(const std::string& path);
 
 
     ~Reader();
@@ -27,4 +27,3 @@ public:
     std::vector<programHeader> getProgramHeaders();
     std::vector<sectionHeader> getSectionHeaders();
 };
-
