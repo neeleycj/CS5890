@@ -1,0 +1,4 @@
+build/
+build-analysis/
+static-analysis/analysis-results/
+static-analysis/build-analysis/
