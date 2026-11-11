@@ -2,11 +2,17 @@
 #include "reader.hpp"
 #include "report.hpp"
 
-int main()
+int main(int argc, char** argv)
 {
     std::string filePath;
-    std::cout << "Enter the path to the ELF file: ";
-    std::cin >> filePath;
+
+    if (argc >= 2)
+        filePath = argv[1];
+    else
+    {
+        std::cout << "Enter the path to the ELF file: ";
+        std::cin >> filePath;
+    }
 
     try
     {
