@@ -172,21 +172,17 @@ void printSectionHeaders(Reader& reader,
     }
 }
 
-void printReport(Reader& reader)
+bool printReport(Reader& reader)
 {
     if (!reader.isValidELFFile())
     {
         std::cout << "unsupported\n";
-        return;
+        return false;
     }
 
     Elf64_Ehdr ehdr = reader.getElf64_Ehdr();
     printElfHeader(ehdr);
 
-    // TODO: these two calls assume enumeration (owned elsewhere) exposes
-    // vector-returning getters, e.g. getProgramHeaders() / getSectionHeaders().
-    // Until that lands, this won't compile against the current Reader, which
-    // only has single-entry getProgramHeader()/getSectionHeader().
     std::vector<programHeader> programHeaders = reader.getProgramHeaders();
     std::vector<sectionHeader> sectionHeaders = reader.getSectionHeaders();
 
@@ -195,4 +191,5 @@ void printReport(Reader& reader)
 
     std::cout << "\n";
     printSectionHeaders(reader, sectionHeaders, ehdr.e_shstrndx);
+    return true;
 }

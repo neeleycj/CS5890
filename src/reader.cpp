@@ -23,7 +23,7 @@ Reader::~Reader()
 bool Reader::isValidELFFile()
 {
     unsigned char e_ident[16];
-    char machineByte;
+    unsigned char machineBytes[2];
 
     if (!fileStream.is_open())
     {
@@ -37,8 +37,10 @@ bool Reader::isValidELFFile()
         throw std::runtime_error("Failed to read ELF identification");
     }
     
+    // e_machine is a 16-bit little-endian field at offset 18. Both bytes must
+    // be checked, otherwise values such as 0x013E pass as x86-64 (62).
     fileStream.seekg(18);
-    fileStream.read(&machineByte, 1);
+    fileStream.read(reinterpret_cast<char*>(machineBytes), 2);
     if (!fileStream)
     {
         throw std::runtime_error("Failed to read ELF machine type");
@@ -63,7 +65,8 @@ bool Reader::isValidELFFile()
     {
         return false;
     }
-    if (machineByte != 62)
+    const uint16_t machine = static_cast<uint16_t>(machineBytes[0] | (machineBytes[1] << 8));
+    if (machine != 62)
     {
         return false;
     }
@@ -205,7 +208,19 @@ sectionHeader Reader::getSectionHeaderAt(uint16_t index)
     return sh;
 }
 
-std::string Reader::readCString(uint64_t offset)
+uint64_t Reader::fileSize()
+{
+    fileStream.clear();
+    fileStream.seekg(0, std::ios::end);
+    const std::streamoff end = fileStream.tellg();
+    if (!fileStream || end < 0)
+    {
+        throw std::runtime_error("Failed to determine file size");
+    }
+    return static_cast<uint64_t>(end);
+}
+
+std::string Reader::readCString(uint64_t offset, uint64_t maxLen)
 {
     if (offset > static_cast<uint64_t>(std::numeric_limits<std::streamoff>::max()))
     {
@@ -218,35 +233,63 @@ std::string Reader::readCString(uint64_t offset)
         throw std::runtime_error("Failed to seek to string at offset " + std::to_string(offset));
     }
 
+    // Never read more than maxLen bytes: a string must terminate inside the
+    // table it belongs to, not somewhere later in the file.
     std::string result;
     char c;
-    while (fileStream.get(c) && c != '\0')
+    for (uint64_t i = 0; i < maxLen; ++i)
     {
+        if (!fileStream.get(c))
+        {
+            throw std::runtime_error("Unexpected end of file in string at offset " + std::to_string(offset));
+        }
+        if (c == '\0')
+        {
+            return result;
+        }
         result.push_back(c);
     }
-    return result;
+    throw std::runtime_error("Unterminated string at offset " + std::to_string(offset));
 }
 
 std::string Reader::resolveSectionName(uint32_t nameIndex, uint16_t shstrndx)
 {
+    // SHN_UNDEF (0) means the file has no section name string table; this is
+    // valid ELF, so report unnamed sections instead of failing.
+    if (shstrndx == 0)
+    {
+        return "";
+    }
+
     Elf64_Ehdr ehdr = getElf64_Ehdr();
     if (shstrndx >= ehdr.e_shnum)
     {
         throw std::runtime_error("Section name string table index is out of range");
     }
     sectionHeader strtab = getSectionHeaderAt(shstrndx);
-    if (nameIndex >= strtab.sh_size ||
-        strtab.sh_offset > std::numeric_limits<uint64_t>::max() - nameIndex)
+    const uint64_t size = fileSize();
+    if (strtab.sh_offset > size || strtab.sh_size > size - strtab.sh_offset)
+    {
+        throw std::runtime_error("Section name string table extends past end of file");
+    }
+    if (nameIndex >= strtab.sh_size)
     {
         throw std::runtime_error("Section name index is out of range");
     }
-    return readCString(strtab.sh_offset + nameIndex);
+    return readCString(strtab.sh_offset + nameIndex, strtab.sh_size - nameIndex);
 }
 
 std::vector<programHeader> Reader::getProgramHeaders()
 {
     Elf64_Ehdr ehdr = getElf64_Ehdr();
     std::vector<programHeader> headers;
+    // Entries are read as fixed-size structs, so any other entry size would
+    // produce overlapping or misaligned records.
+    if (ehdr.e_phnum > 0 && ehdr.e_phentsize != sizeof(programHeader))
+    {
+        throw std::runtime_error("Unsupported program header entry size: " + std::to_string(ehdr.e_phentsize) +
+                                 " (expected " + std::to_string(sizeof(programHeader)) + ")");
+    }
     headers.reserve(ehdr.e_phnum);
 
     for (uint16_t i = 0; i < ehdr.e_phnum; ++i)
@@ -261,6 +304,11 @@ std::vector<sectionHeader> Reader::getSectionHeaders()
 {
     Elf64_Ehdr ehdr = getElf64_Ehdr();
     std::vector<sectionHeader> headers;
+    if (ehdr.e_shnum > 0 && ehdr.e_shentsize != sizeof(sectionHeader))
+    {
+        throw std::runtime_error("Unsupported section header entry size: " + std::to_string(ehdr.e_shentsize) +
+                                 " (expected " + std::to_string(sizeof(sectionHeader)) + ")");
+    }
     headers.reserve(ehdr.e_shnum);
 
     for (uint16_t i = 0; i < ehdr.e_shnum; ++i)

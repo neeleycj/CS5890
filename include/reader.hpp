@@ -21,7 +21,8 @@ public:
 
     programHeader getProgramHeaderAt(uint16_t index);
     sectionHeader getSectionHeaderAt(uint16_t index);
-    std::string readCString(uint64_t offset);
+    uint64_t fileSize();
+    std::string readCString(uint64_t offset, uint64_t maxLen);
     std::string resolveSectionName(uint32_t nameIndex, uint16_t shstrndx);
 
     std::vector<programHeader> getProgramHeaders();

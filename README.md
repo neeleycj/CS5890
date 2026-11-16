@@ -23,6 +23,16 @@
 ## Basic Usage
 Once the tool is running, you will be prompted to enter a file path. If the file exists, it will be validated and the header information will be reported.
 
+You can also pass the path as an argument: `./build/main /bin/ls`.
+
+Exit codes: `0` report printed, `1` error (unreadable or malformed file), `2` unsupported format.
+
+## Dynamic Analysis
+```
+./dynamic_analysis/dyn_analysis.sh
+```
+Builds with Clang AddressSanitizer and runs the test cases in `dynamic_analysis/tests/cases.txt`. See `dynamic_analysis/bug_report.md`.
+
 ## Supported Scope
 This tool supports ELF64, little-endian, x86-64 ELF files.
 

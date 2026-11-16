@@ -1,0 +1,53 @@
+# Test manifest read by dyn_analysis.sh. Fields are separated by '|':
+#
+#   category | name | mode | argument | expected exit code | expected output text
+#
+# Modes:
+#   file       run `main <argument>` (argument is relative to tests/)
+#   prompt     run `main` with no args and feed <argument> as the path on stdin
+#   stdin_eof  run `main` with no args and stdin closed (/dev/null)
+#   missing    run `main` on a path that does not exist
+#   dir        run `main` on a directory
+#   unreadable copy <argument> to a temp file with mode 000 and run on it
+#   pipe       stream <argument> through a pipe: `cat file | main /dev/stdin`
+#   pipe_trunc same, but the writer stops after 100 bytes (`head -c 100`)
+#   sigint     run `main` at its prompt and interrupt it with SIGINT after 1 s
+#
+# Exit codes: 0 = report, 1 = error, 2 = unsupported, 124 = killed by timeout.
+# Expected text "-" means only the exit code is checked.
+# Every case also fails if any AddressSanitizer/LeakSanitizer report appears.
+
+normal    | base_pie_executable      | file       | normal/test_base                      | 0   | .shstrtab
+normal    | relocatable_object       | file       | normal/test_relocatable.o             | 0   | REL (Relocatable file)
+normal    | interactive_prompt       | prompt     | normal/test_base                      | 0   | GNU_STACK
+
+boundary  | empty_file               | file       | boundary/test_empty.elf               | 1   | Failed to read ELF identification
+boundary  | header_only_64_bytes     | file       | boundary/test_header_only_64.elf      | 0   | (none)
+boundary  | header_63_bytes          | file       | boundary/test_header_63.elf           | 1   | Failed to read ELF header
+boundary  | minimum_counts           | file       | boundary/test_minimum_counts.elf      | 0   | (none)
+boundary  | maximum_counts           | file       | boundary/test_maximum_counts.elf      | 1   | Failed to read program header 2540
+boundary  | offsets_out_of_range     | file       | boundary/test_offsets_out_of_range.elf| 1   | Program header 0 offset is out of range
+boundary  | shstrndx_one_past        | file       | boundary/test_shstrndx_one_past.elf   | 1   | Section name string table index is out of range
+boundary  | shstrndx_undef           | file       | boundary/test_shstrndx_undef.elf      | 0   | PROGBITS   AX
+boundary  | name_last_byte           | file       | boundary/test_name_last_byte.elf      | 0   | .shstrtab
+
+malformed | bad_magic                | file       | malformed/test_bad_magic.elf          | 2   | unsupported
+malformed | class32                  | file       | malformed/test_class32.elf            | 2   | unsupported
+malformed | big_endian               | file       | malformed/test_big_endian.elf         | 2   | unsupported
+malformed | machine_0x013e           | file       | malformed/test_machine_0x013e.elf     | 2   | unsupported
+malformed | trunc_ident              | file       | malformed/test_trunc_ident.elf        | 1   | Failed to read ELF machine type
+malformed | trunc_phdr_table         | file       | malformed/test_trunc_phdr_table.elf   | 1   | Failed to read program header 3
+malformed | trunc_shdr_table         | file       | malformed/test_trunc_shdr_table.elf   | 1   | Failed to read section header 5
+malformed | phentsize_zero           | file       | malformed/test_phentsize_zero.elf     | 1   | Unsupported program header entry size: 0
+malformed | shentsize_mismatch       | file       | malformed/test_shentsize_mismatch.elf | 1   | Unsupported section header entry size: 40
+malformed | name_unterminated        | file       | malformed/test_name_unterminated.elf  | 1   | Unterminated string
+malformed | strtab_past_eof          | file       | malformed/test_strtab_past_eof.elf    | 1   | extends past end of file
+malformed | strtab_size_huge         | file       | malformed/test_strtab_size_huge.elf   | 1   | extends past end of file
+
+failure   | missing_file             | missing    | -                                     | 1   | Failed to open file
+failure   | directory_input          | dir        | normal                                | 1   | Failed to read ELF identification
+failure   | unreadable_file          | unreadable | normal/test_base                      | 1   | Failed to open file
+failure   | non_seekable_pipe        | pipe       | normal/test_base                      | 1   | Failed to read ELF identification
+failure   | interrupted_pipe         | pipe_trunc | normal/test_base                      | 1   | Error:
+failure   | stdin_closed             | stdin_eof  | -                                     | 1   | No file path provided
+failure   | sigint_at_prompt         | sigint     | -                                     | 124 | -

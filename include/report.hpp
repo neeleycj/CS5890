@@ -20,4 +20,5 @@ void printProgramHeaders(const std::vector<programHeader>& headers);
 void printSectionHeaders(Reader& reader,
                           const std::vector<sectionHeader>& sections,
                           uint16_t shstrndx);
-void printReport(Reader& reader);
+// Returns false if the file is not a supported ELF64/LE/x86-64 binary.
+bool printReport(Reader& reader);
